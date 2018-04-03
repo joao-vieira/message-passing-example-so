@@ -12,33 +12,46 @@ class AtividadePrincipal : AppCompatActivity() {
     val rNumeroAleatorioGerado = Random()
     var iNumeroAleatorioCapturado = 0
     var bProsseguirProduzindo = true
+    var iOrigemMensagemProduzida = -1;
     var iMensagemProduzidaEmMemoria = -1
     var iToken = 0
     var runThreadConsumidora: Runnable? = null
     var bProsseguirConsumindo = true
-    var iMensagemRecebida: Int? = null
+    var iMensagemRecebida = -1
     var alNumerosRecebidos: ArrayList<Int> = ArrayList()
 
     fun enviarMensagem(origem: Int, iMensagem: Int) {
+        iOrigemMensagemProduzida = origem
+        iMensagemProduzidaEmMemoria = iMensagem
+        bProsseguirProduzindo = false
+    }
 
-        if (origem == 1) {
-            iMensagemProduzidaEmMemoria = iMensagem
-            bProsseguirProduzindo = false
+    fun int ReceberMensagem(origem: Int){
+        if (origem == iOrigemMensagemProduzida) and (iMensagemProduzidaEmMemoria > -1){
             bProsseguirConsumindo = true
+            return iMensagemProduzidaEmMemoria
         }
-        if (origem == 2) {
-            bProsseguirProduzindo = true
-            bProsseguirConsumindo = false
-        }
+    }
+	
+    fun RetornaMensagem(mensagem: int){
+        bProsseguirProduzindo = true
+        bProsseguirConsumindo = false
+        iMensagemRecebida = mensagem
+    }
+	
+    fun boolean VerificaRetorno(){
+	    return iMensagemProduzidaEmMemoria == iMensagemRecebida
     }
 
     fun iniciarThreadProdutora() {
         runThreadProdutora = Runnable {
-            iToken = 1
-            if (bProsseguirProduzindo) {
+            if (VerificaRetorno() and bProsseguirProduzindo) {
                 iNumeroAleatorioCapturado = rNumeroAleatorioGerado.nextInt(100)
-                enviarMensagem(iToken, iNumeroAleatorioCapturado)
-            }
+                enviarMensagem(1, iNumeroAleatorioCapturado)
+            } 
+			else if (bProsseguirProduzindo) {
+				enviarMensagem(1, iNumeroAleatorioCapturado)
+			}
             Handler().postDelayed(runThreadProdutora, 1000)
         }
         Handler().post(runThreadProdutora)
@@ -46,13 +59,15 @@ class AtividadePrincipal : AppCompatActivity() {
 
     fun iniciarThreadConsumidora() {
         runThreadConsumidora = Runnable {
-            iToken = 2
+            val MensagemRecebida = ReceberMensagem(1)
             if (bProsseguirConsumindo) {
-                iMensagemRecebida = iMensagemProduzidaEmMemoria
-                alNumerosRecebidos.add(iMensagemRecebida!!)
-                enviarMensagem(iToken, -1)
+                alNumerosRecebidos.add(MensagemRecebida!!)
+                RetornaMensagem(MensagemRecebida)
                 println("CONSUMIDOS: " + alNumerosRecebidos)
             }
+			else {
+				RetornaMensagem(-1)
+			}
             Handler().postDelayed(runThreadConsumidora, 500)
         }
         Handler().post(runThreadConsumidora)
