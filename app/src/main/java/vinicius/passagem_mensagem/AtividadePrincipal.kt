@@ -8,67 +8,73 @@ import java.util.Random
 
 class AtividadePrincipal : AppCompatActivity() {
 
-    var runThreadProdutora: Runnable? = null
-    val rNumeroAleatorioGerado = Random()
-    var iNumeroAleatorioCapturado = 0
-    var bProsseguirProduzindo = true
-    var iOrigemMensagemProduzida = -1;
-    var iMensagemProduzidaEmMemoria = -1
-    var iToken = 0
+    var runThreadProdutora  : Runnable? = null
     var runThreadConsumidora: Runnable? = null
-    var bProsseguirConsumindo = true
-    var iMensagemRecebida = -1
+
+    var bProsseguirProduzindo = true
+    var bProsseguirConsumindo = false
+
+    var iNumeroAleatorioCapturado  : Int? = 0
+    var iOrigemMensagemProduzida   : Int? = -1
+    var iMensagemProduzidaEmMemoria: Int? = -1
+    var iMensagemRecebida          : Int? = -1
+
     var alNumerosRecebidos: ArrayList<Int> = ArrayList()
 
+    
     fun enviarMensagem(origem: Int, iMensagem: Int) {
-        iOrigemMensagemProduzida = origem
-        iMensagemProduzidaEmMemoria = iMensagem
-        bProsseguirProduzindo = false
+        iOrigemMensagemProduzida    = origem    /* Armazena quem foi o responsável pelo envio da mensagem */
+        iMensagemProduzidaEmMemoria = iMensagem /* Guarda na memória a msg enviada pelo responsável/origem */
+        bProsseguirProduzindo       = false     /* Coloca em espera a produção de novos valores */
     }
 
-    fun int ReceberMensagem(origem: Int){
-        if (origem == iOrigemMensagemProduzida) and (iMensagemProduzidaEmMemoria > -1){
+    fun ReceberMensagem(origem: Int) : Int {
+        if (origem == iOrigemMensagemProduzida && iMensagemProduzidaEmMemoria!! > -1) {
             bProsseguirConsumindo = true
-            return iMensagemProduzidaEmMemoria
+            return iMensagemProduzidaEmMemoria!!
         }
+        return 0
     }
-	
-    fun RetornaMensagem(mensagem: int){
+    
+    fun RetornaMensagem(mensagem: Int){
         bProsseguirProduzindo = true
         bProsseguirConsumindo = false
-        iMensagemRecebida = mensagem
+        iMensagemRecebida     = mensagem
     }
-	
-    fun boolean VerificaRetorno(){
-	    return iMensagemProduzidaEmMemoria == iMensagemRecebida
+    
+    fun VerificaRetorno() : Boolean {
+        return iMensagemProduzidaEmMemoria == iMensagemRecebida
     }
 
     fun iniciarThreadProdutora() {
         runThreadProdutora = Runnable {
-            if (VerificaRetorno() and bProsseguirProduzindo) {
-                iNumeroAleatorioCapturado = rNumeroAleatorioGerado.nextInt(100)
-                enviarMensagem(1, iNumeroAleatorioCapturado)
-            } 
-			else if (bProsseguirProduzindo) {
-				enviarMensagem(1, iNumeroAleatorioCapturado)
-			}
-            Handler().postDelayed(runThreadProdutora, 1000)
+            /* Se a mensagem foi enviada e o destino confirmou o recebimento ele gera um novo valor */
+            if (VerificaRetorno() && bProsseguirProduzindo) {
+                iNumeroAleatorioCapturado = iNumeroAleatorioCapturado!! + 1
+                enviarMensagem(1, iNumeroAleatorioCapturado!!)
+            }
+            /* Se a mensagem foi enviada porém a origem não receber uma confirmação desse recebimento ele reenvia o mesmo valor*/
+            else if (bProsseguirProduzindo) {
+                enviarMensagem(1, iNumeroAleatorioCapturado!!)
+            }
+            Handler().postDelayed(runThreadProdutora, 2000)
         }
         Handler().post(runThreadProdutora)
     }
 
     fun iniciarThreadConsumidora() {
         runThreadConsumidora = Runnable {
-            val MensagemRecebida = ReceberMensagem(1)
+            val MensagemRecebida = ReceberMensagem(1) /* Recebe a mensagem que está em memória */
+
             if (bProsseguirConsumindo) {
-                alNumerosRecebidos.add(MensagemRecebida!!)
-                RetornaMensagem(MensagemRecebida)
+                alNumerosRecebidos.add(MensagemRecebida!!) /* Armazena em um array a mensagem recebida */
+                RetornaMensagem(MensagemRecebida) /* Retorna a mensagem confirmando para o produtor que ele pode gerar novos valores */
                 println("CONSUMIDOS: " + alNumerosRecebidos)
             }
-			else {
-				RetornaMensagem(-1)
-			}
-            Handler().postDelayed(runThreadConsumidora, 500)
+            else {
+                RetornaMensagem(-1) /* Retorna -1 solicitando que a origem reenvia a mensagem, sem produzir um novo valor */
+            }
+            Handler().postDelayed(runThreadConsumidora, 2000)
         }
         Handler().post(runThreadConsumidora)
     }
